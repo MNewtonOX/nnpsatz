@@ -15,14 +15,14 @@ u_min = -5*ones(dim_in,1);
 u_max = 5*ones(dim_in,1);
 
 % Hidden layer dimensions
-dim_hidden = [10,10];
+dim_hidden = [6,5];
 
 % Ouput dimension
 dim_out = 1;
 
 % Create NN parameters
 dims = [dim_in, dim_hidden, dim_out];
-AF = 'tanh';
+AF = 'sigmoid';
 net = nnsequential(dims,AF);
 W = net.weights;
 b = net.biases;
@@ -56,7 +56,7 @@ tic
 
 % Output layer constraints
 v_out = W{end}*x(end - dim_hidden(end) + 1 : end) + b{end};
-c = 1; % c = 1 is max, c = -1 is min
+c = -1; % c = 1 is max, c = -1 is min
 f = -c*(y - v_out);
 
 for j = 1:length(ineq_constraints)

@@ -97,33 +97,52 @@ for j = 1:length(dim_hidden)
         % Sector constraints
         %ineq_constraints{icount} = (x_curr_layer(k) - 0.5)*(0.25*v{j}(k) + 0.5 - x_curr_layer(k)); icount = icount + 1;
         
-        % Ofset sector constraints
-        if Y_min_curr_layer(k) > 0
-            Xmid = (X_max_curr_layer(k) - X_min_curr_layer(k))/2;
-            Ymid = (Y_max_curr_layer(k) - Y_min_curr_layer(k))/2;
-            grad1 = (X_min_curr_layer(k) - Xmid)/(Y_min_curr_layer(k) - Ymid); 
-            c1 = X_min_curr_layer(k) - grad1*Y_min_curr_layer(k);
-            grad2 = (X_max_curr_layer(k) - Xmid)/(Y_max_curr_layer(k) - Ymid);
-            c2 = X_max_curr_layer(k) - grad2*Y_max_curr_layer(k);
-            ineq_constraints{icount} = (x_curr_layer(k) - (grad1*v{j}(k) + c1))*(-x_curr_layer(k) + grad2*v{j}(k) + c2); icount = icount + 1;
-        elseif Y_max_curr_layer(k) < 0
-            Xmid = (X_max_curr_layer(k) - X_min_curr_layer(k))/2;
-            Ymid = (Y_max_curr_layer(k) - Y_min_curr_layer(k))/2;
-            grad1 = (X_min_curr_layer(k) - Xmid)/(Y_min_curr_layer(k) - Ymid); 
-            c1 = X_min_curr_layer(k) - grad1*Y_min_curr_layer(k);
-            grad2 = (X_max_curr_layer(k) - Xmid)/(Y_max_curr_layer(k) - Ymid);
-            c2 = X_max_curr_layer(k) - grad2*Y_max_curr_layer(k);
-            ineq_constraints{icount} = (x_curr_layer(k) - (grad1*v{j}(k) + c1))*(-x_curr_layer(k) + grad2*v{j}(k) + c2); icount = icount + 1;
-        else
-            if abs(Y_max_curr_layer(k)) > abs(Y_min_curr_layer(k))
-                grad1 = (X_max_curr_layer(k) - 0.5)/(Y_max_curr_layer(k) - 0);
-                ineq_constraints{icount} = (x_curr_layer(k) - (grad1*v{j}(k) + 0.5))*(0.25*v{j}(k) + 0.5 - x_curr_layer(k)); icount = icount + 1;
-            else
-                grad1 = (X_min_curr_layer(k) - 0.5)/(Y_min_curr_layer(k) - 0);
-                ineq_constraints{icount} = (x_curr_layer(k) - (grad1*v{j}(k) + 0.5))*(0.25*v{j}(k) + 0.5 - x_curr_layer(k)); icount = icount + 1;
-            end
-            
-        end
+%         % Ofset sector constraints
+%         if Y_min_curr_layer(k) > 0
+%             Xmid = (X_max_curr_layer(k) - X_min_curr_layer(k))/2;
+%             Ymid = (Y_max_curr_layer(k) - Y_min_curr_layer(k))/2;
+%             grad1 = (X_min_curr_layer(k) - Xmid)/(Y_min_curr_layer(k) - Ymid); 
+%             c1 = X_min_curr_layer(k) - grad1*Y_min_curr_layer(k);
+%             grad2 = (X_max_curr_layer(k) - Xmid)/(Y_max_curr_layer(k) - Ymid);
+%             c2 = X_max_curr_layer(k) - grad2*Y_max_curr_layer(k);
+%             ineq_constraints{icount} = (x_curr_layer(k) - (grad1*v{j}(k) + c1))*(-x_curr_layer(k) + grad2*v{j}(k) + c2); icount = icount + 1;
+%         elseif Y_max_curr_layer(k) < 0
+%             Xmid = (X_max_curr_layer(k) - X_min_curr_layer(k))/2;
+%             Ymid = (Y_max_curr_layer(k) - Y_min_curr_layer(k))/2;
+%             grad1 = (X_min_curr_layer(k) - Xmid)/(Y_min_curr_layer(k) - Ymid); 
+%             c1 = X_min_curr_layer(k) - grad1*Y_min_curr_layer(k);
+%             grad2 = (X_max_curr_layer(k) - Xmid)/(Y_max_curr_layer(k) - Ymid);
+%             c2 = X_max_curr_layer(k) - grad2*Y_max_curr_layer(k);
+%             ineq_constraints{icount} = (x_curr_layer(k) - (grad1*v{j}(k) + c1))*(-x_curr_layer(k) + grad2*v{j}(k) + c2); icount = icount + 1;
+%         else
+%             if abs(Y_max_curr_layer(k)) > abs(Y_min_curr_layer(k))
+%                 grad1 = (X_max_curr_layer(k) - 0.5)/(Y_max_curr_layer(k) - 0);
+%                 ineq_constraints{icount} = (x_curr_layer(k) - (grad1*v{j}(k) + 0.5))*(0.25*v{j}(k) + 0.5 - x_curr_layer(k)); icount = icount + 1;
+%             else
+%                 grad1 = (X_min_curr_layer(k) - 0.5)/(Y_min_curr_layer(k) - 0);
+%                 ineq_constraints{icount} = (x_curr_layer(k) - (grad1*v{j}(k) + 0.5))*(0.25*v{j}(k) + 0.5 - x_curr_layer(k)); icount = icount + 1;
+%             end
+%             
+%         end
+%         
+        % Two sector constraints
+        Xsec1 = 1/2 + (1/8)^0.5; 
+        Ysec1 = -log(1/Xsec1 - 1);
+        grad1a = (X_max_curr_layer(k) - Xsec1)/(Y_max_curr_layer(k) - Ysec1);
+        c1a = X_max_curr_layer(k) - grad1a*Y_max_curr_layer(k);
+        %grad1a = 0; c1a = Xsec1;
+        grad1b = (Xsec1 - 0)/(Ysec1 + 2); 
+        c1b = Xsec1 - grad1b*Ysec1;
+        ineq_constraints{icount} = (x_curr_layer(k) - (grad1a*v{j}(k) + c1a))*((grad1b*v{j}(k) + c1b) - x_curr_layer(k)); icount = icount + 1;
+        
+        Xsec2 = 1/2 - (1/8)^0.5; 
+        Ysec2 = -log(1/Xsec1 - 1);
+        grad2a = (X_min_curr_layer(k) - Xsec2)/(Y_min_curr_layer(k) - Ysec2);
+        c2a = X_min_curr_layer(k) - grad2a*Y_min_curr_layer(k);
+        %grad2a = 0; c2a = Xsec2;
+        grad2b = (Xsec2 - 1)/(Ysec2 - 2);  
+        c2b = Xsec2 - grad2b*Ysec2;
+        ineq_constraints{icount} = (x_curr_layer(k) - (grad2a*v{j}(k) + c2a))*((grad2b*v{j}(k) + c2b) - x_curr_layer(k)); icount = icount + 1;
         
 % %        Under linear constraints
 %         if Y_min_curr_layer(k) > 0
@@ -202,33 +221,66 @@ for j = 1:length(dim_hidden)
         % Sector constraints
         %ineq_constraints{icount} = (x_curr_layer(k) - 0)*(v{j}(k) - x_curr_layer(k)); icount = icount + 1;
         
-        % Ofset sector constraints
-        if Y_min_curr_layer(k) > 0
-            Xmid = (X_max_curr_layer(k) - X_min_curr_layer(k))/2;
-            Ymid = (Y_max_curr_layer(k) - Y_min_curr_layer(k))/2;
-            grad1 = (X_min_curr_layer(k) - Xmid)/(Y_min_curr_layer(k) - Ymid); 
-            c1 = X_min_curr_layer(k) - grad1*Y_min_curr_layer(k);
-            grad2 = (X_max_curr_layer(k) - Xmid)/(Y_max_curr_layer(k) - Ymid);
-            c2 = X_max_curr_layer(k) - grad2*Y_max_curr_layer(k);
-            ineq_constraints{icount} = (x_curr_layer(k) - (grad1*v{j}(k) + c1))*(-x_curr_layer(k) + grad2*v{j}(k) + c2); icount = icount + 1;
-        elseif Y_max_curr_layer(k) < 0
-            Xmid = (X_max_curr_layer(k) - X_min_curr_layer(k))/2;
-            Ymid = (Y_max_curr_layer(k) - Y_min_curr_layer(k))/2;
-            grad1 = (X_min_curr_layer(k) - Xmid)/(Y_min_curr_layer(k) - Ymid); 
-            c1 = X_min_curr_layer(k) - grad1*Y_min_curr_layer(k);
-            grad2 = (X_max_curr_layer(k) - Xmid)/(Y_max_curr_layer(k) - Ymid);
-            c2 = X_max_curr_layer(k) - grad2*Y_max_curr_layer(k);
-            ineq_constraints{icount} = (x_curr_layer(k) - (grad1*v{j}(k) + c1))*(-x_curr_layer(k) + grad2*v{j}(k) + c2); icount = icount + 1;
-        else
-            if abs(Y_max_curr_layer(k)) > abs(Y_min_curr_layer(k))
-                grad1 = (X_max_curr_layer(k) - 0)/(Y_max_curr_layer(k) - 0);
-                ineq_constraints{icount} = (x_curr_layer(k) - grad1*v{j}(k))*(1*v{j}(k) - x_curr_layer(k)); icount = icount + 1;
-            else
-                grad1 = (X_min_curr_layer(k) - 0)/(Y_min_curr_layer(k) - 0);
-                ineq_constraints{icount} = (x_curr_layer(k) - grad1*v{j}(k))*(1*v{j}(k) - x_curr_layer(k)); icount = icount + 1;
-            end
-            
-        end
+%         % Ofset sector constraints
+%         if Y_min_curr_layer(k) > 0
+%             Xmid = (X_max_curr_layer(k) - X_min_curr_layer(k))/2;
+%             Ymid = (Y_max_curr_layer(k) - Y_min_curr_layer(k))/2;
+%             grad1 = (X_min_curr_layer(k) - Xmid)/(Y_min_curr_layer(k) - Ymid); 
+%             c1 = X_min_curr_layer(k) - grad1*Y_min_curr_layer(k);
+%             grad2 = (X_max_curr_layer(k) - Xmid)/(Y_max_curr_layer(k) - Ymid);
+%             c2 = X_max_curr_layer(k) - grad2*Y_max_curr_layer(k);
+%             ineq_constraints{icount} = (x_curr_layer(k) - (grad1*v{j}(k) + c1))*(-x_curr_layer(k) + grad2*v{j}(k) + c2); icount = icount + 1;
+%         elseif Y_max_curr_layer(k) < 0
+%             Xmid = (X_max_curr_layer(k) - X_min_curr_layer(k))/2;
+%             Ymid = (Y_max_curr_layer(k) - Y_min_curr_layer(k))/2;
+%             grad1 = (X_min_curr_layer(k) - Xmid)/(Y_min_curr_layer(k) - Ymid); 
+%             c1 = X_min_curr_layer(k) - grad1*Y_min_curr_layer(k);
+%             grad2 = (X_max_curr_layer(k) - Xmid)/(Y_max_curr_layer(k) - Ymid);
+%             c2 = X_max_curr_layer(k) - grad2*Y_max_curr_layer(k);
+%             ineq_constraints{icount} = (x_curr_layer(k) - (grad1*v{j}(k) + c1))*(-x_curr_layer(k) + grad2*v{j}(k) + c2); icount = icount + 1;
+%         else
+%             if abs(Y_max_curr_layer(k)) > abs(Y_min_curr_layer(k))
+%                 grad1 = (X_max_curr_layer(k) - 0)/(Y_max_curr_layer(k) - 0);
+%                 ineq_constraints{icount} = (x_curr_layer(k) - grad1*v{j}(k))*(1*v{j}(k) - x_curr_layer(k)); icount = icount + 1;
+%             else
+%                 grad1 = (X_min_curr_layer(k) - 0)/(Y_min_curr_layer(k) - 0);
+%                 ineq_constraints{icount} = (x_curr_layer(k) - grad1*v{j}(k))*(1*v{j}(k) - x_curr_layer(k)); icount = icount + 1;
+%             end
+%             
+%         end
+        
+        % Two sector constraints
+        Xsec1 = (1/2)^0.5; 
+        Ysec1 = atanh(Xsec1);
+        grad1a = (X_max_curr_layer(k) - Xsec1)/(Y_max_curr_layer(k) - Ysec1);
+        c1a = X_max_curr_layer(k) - grad1a*Y_max_curr_layer(k);
+        %grad1a = 0; c1a = Xsec1;
+        grad1b = (Xsec1 + 1)/(Ysec1 + 1); 
+        c1b = Xsec1 - grad1b*Ysec1;
+        ineq_constraints{icount} = (x_curr_layer(k) - (grad1a*v{j}(k) + c1a))*((grad1b*v{j}(k) + c1b) - x_curr_layer(k)); icount = icount + 1;
+        
+        Xsec2 = -(1/2)^0.5; 
+        Ysec2 = atanh(Xsec2);
+        grad2a = (X_min_curr_layer(k) - Xsec2)/(Y_min_curr_layer(k) - Ysec2);
+        c2a = X_min_curr_layer(k) - grad2a*Y_min_curr_layer(k);
+        %grad2a = 0; c2a = Xsec2;
+        grad2b = (Xsec2 - 1)/(Ysec2 - 1);  
+        c2b = Xsec2 - grad2b*Ysec2;
+        ineq_constraints{icount} = (x_curr_layer(k) - (grad2a*v{j}(k) + c2a))*((grad2b*v{j}(k) + c2b) - x_curr_layer(k)); icount = icount + 1;
+        
+%         fplot(tanh(x(1)))
+%         hold on
+%         fplot(x(1))
+%         fplot(grad1*x(1))
+%         fplot(X_max_curr_layer(k))
+%         fplot(X_min_curr_layer(k))
+
+% fplot(tanh(x(1)))
+% hold on
+% fplot(grad1a*x(1) + c1a)
+% fplot(grad1b*x(1) + c1b)
+% fplot(grad2a*x(1) + c2a)
+% fplot(grad2b*x(1) + c2b)
         
         % Derivative constraints
         %ineq_constraints{icount} = x_curr_layer(k)^2; icount = icount + 1;
