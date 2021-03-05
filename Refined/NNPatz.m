@@ -50,6 +50,14 @@ for j = 1:length(eq_constraints)
     [prog,t{j}] = sospolyvar(prog,monomials(vars,0));
 end
 
+s2 = cell(length(ineq_constraints),length(ineq_constraints));
+for j = 1:length(ineq_constraints)
+    for k = 1:length(ineq_constraints)
+        [prog,s2{j,k}] = sospolyvar(prog,monomials(vars,0));
+        prog = sosineq(prog,s2{j,k});
+    end
+end
+
 % Create statement 1 + cone + ideal
 expr = - f;
 
@@ -77,6 +85,20 @@ for j = 1:length(eq_constraints)
     expr = expr - t{j}*eq_constraints{j};
 end
 
+for j = 1:length(ineq_constraints)
+    for k = j+1:length(ineq_constraints)
+        expr = expr - s2{j,k}*ineq_constraints{j}*ineq_constraints{k};
+    end
+end
+% 
+% for j = 1:length(ineq_constraints)
+%     for k = 1:dim_in
+%         [prog,s3{j,k}] = sospolyvar(prog,monomials(vars,0));
+%         prog = sosineq(prog,s3{j,k});
+%         expr = expr - s3{j,k}*ineq_constraints{j}*con_in1(k)*con_in2(k);
+%     end
+% end
+    
 % P-satz refutation
 prog = sosineq(prog,expr);
 if dim_out == 1
@@ -84,7 +106,7 @@ if dim_out == 1
 elseif dim_out == 2
     prog = sossetobj(prog,y);
 end
-solver_opt.solver = 'sedumi'; % put this outside function eventually
+solver_opt.solver = 'sdpt3'; % put this outside function eventually
 prog = sossolve(prog,solver_opt);
 SOLy = sosgetsol(prog,y);
 

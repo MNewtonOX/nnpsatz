@@ -3,6 +3,7 @@ close all
 clc
 
 addpath('cvx\sedumi')  
+addpath('cvx\sdpt3')  
 
 %% Generate NN parameters
 rng('default');
@@ -11,11 +12,11 @@ rng('default');
 dim_in = 1; 
 
 % Input bounds
-u_min = -5*ones(dim_in,1);
-u_max = 20*ones(dim_in,1);
+u_min = -50*ones(dim_in,1);
+u_max = 50*ones(dim_in,1);
 
 % Hidden layer dimensions
-dim_hidden = [5,5];
+dim_hidden = [2,2];
 
 % Ouput dimension. Can be 1,2
 dim_out = 1;
@@ -68,6 +69,7 @@ if dim_out == 1
     k = 1;
     for c = [-1,1]
         [DeepSDP_bound(k),~] = deep_sdp(net,u_min,u_max,c,repeated,options);
+        DeepSDP_bound(k) = DeepSDP_bound(k)*c;
         k = k + 1;
     end
 elseif dim_out == 2
