@@ -23,7 +23,7 @@ dim_out = 1;
 
 % Create NN parameters
 dims = [dim_in, dim_hidden, dim_out];
-AF = 'sigmoid';
+AF = 'relu';
 net = nnsequential(dims,AF);
 W = net.weights;
 b = net.biases;
@@ -35,14 +35,36 @@ repeated = 0;
 % Number of sides of polytope
 dim_poly = 6;
 
+% Controls how the constraints are multiplied together
+con_type = 0;
+% 0: No overlapping constraints.
+% 1: Multiply all constraints by one other constraint, excluding input constraints
+% 2: Multiply all constraints by one other constraint
+% 3: Multiply all constraints within the same node
+% 4: Multiply all constraints within the same layer
+% 5: Multiply all constraints within the same layer and neighbouring layers
+% 6: Multiply all constraints within the same layer and neighbouring layers, excluding input constraints
+
+% Controls the order of the polyomials in the SOS program
+sos_order = 2;
+
+% Controls the structure of the SOS polynomials
+sos_type = 4;
+% 0: Full, each multiplier will contain all variables in network
+% 1: Vars in constraints, each multiplier will only contain variables in the respective constraint
+% 2: Node only, each multiplier will only contain all variables in the respective node
+% 3: Layer only, each multiplier will only contain all variables in the respecitive layer
+% 4: Layer and neighbours only, each multiplier will only contain all variables in the respecitive layer and neighbouring layers
+
 %load('C:\Users\lascat6145\Documents\ReachSDP-master\ReachSDP-master\nnmpc_nets_di_1.mat'); 
 %dim_in = 2; dim_hidden = [15,10]; dim_out = 1; W = weights; b = biases;
 
 %% SOS 
+tic
 if dim_out == 1
     k = 1;
-    for c = [-1,1]
-        [SOL_bound(k),~] = NNPatz(net,u_min,u_max,repeated,c);
+    for c = 1%[-1,1]
+        [SOL_bound(k),~] = NNPatz(net,u_min,u_max,repeated,c,con_type,sos_order,sos_type)
         k = k + 1;
     end
 elseif dim_out == 2
@@ -50,11 +72,12 @@ elseif dim_out == 2
         theta = (i-1)/dim_poly*2*pi;
         C(i,:) = [cos(theta);sin(theta)];
         c = C(i,:)';
-        [SOL_bound(i),~] = NNPatz(net,u_min,u_max,repeated,c);
+        [SOL_bound(i),~] = NNPatz(net,u_min,u_max,repeated,c,con_type,sos_order,sos_type)
     end
 elseif dim_out >= 3
    disp('Will do higher dimensions later') 
 end
+toc
 
 %% Faz method
 DeepSDP_bound = [];

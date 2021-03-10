@@ -41,23 +41,23 @@ for j = 1:length(dim_hidden)
         node_num = sum(dim_hidden(1:j-1)) + k;
         % Sector constraints
         if any(node_num == Ip) 
-            ineq_constraints{icount} = x_curr_layer(k) - alpha*v{j}(k); icount = icount + 1;
-            eq_constraints{ecount} = x_curr_layer(k) - beta*v{j}(k); ecount = ecount + 1;
-            eq_constraints{ecount} = (x_curr_layer(k) - beta*v{j}(k))*(x_curr_layer(k) - beta*v{j}(k)); ecount = ecount + 1;
+            ineq_constraints{icount,1} = x_curr_layer(k) - alpha*v{j}(k); ineq_constraints{icount,2} = [j,k]; icount = icount + 1; 
+            eq_constraints{ecount,1} = x_curr_layer(k) - beta*v{j}(k); eq_constraints{ecount,2} = [j,k]; ecount = ecount + 1;
+            eq_constraints{ecount,1} = (x_curr_layer(k) - beta*v{j}(k))*(x_curr_layer(k) - beta*v{j}(k)); eq_constraints{ecount,2} = [j,k]; ecount = ecount + 1;
         elseif any(node_num == In) 
-            eq_constraints{ecount} = x_curr_layer(k) - alpha*v{j}(k); ecount = ecount + 1;
-            ineq_constraints{icount} = x_curr_layer(k) - beta*v{j}(k); icount = icount + 1;
-            eq_constraints{ecount} = (x_curr_layer(k) - alpha*v{j}(k))*(x_curr_layer(k) - alpha*v{j}(k)); ecount = ecount + 1;
+            eq_constraints{ecount,1} = x_curr_layer(k) - alpha*v{j}(k); eq_constraints{ecount,2} = [j,k]; ecount = ecount + 1;
+            ineq_constraints{icount,1} = x_curr_layer(k) - beta*v{j}(k); ineq_constraints{icount,2} = [j,k]; icount = icount + 1;
+            eq_constraints{ecount,1} = (x_curr_layer(k) - alpha*v{j}(k))*(x_curr_layer(k) - alpha*v{j}(k)); eq_constraints{ecount,2} = [j,k]; ecount = ecount + 1;
         elseif any(node_num == Ipn) 
-            ineq_constraints{icount} = x_curr_layer(k) - alpha*v{j}(k); icount = icount + 1;
-            ineq_constraints{icount} = x_curr_layer(k) - beta*v{j}(k); icount = icount + 1;
-            eq_constraints{ecount} = (x_curr_layer(k) - alpha*v{j}(k))*(x_curr_layer(k) - beta*v{j}(k)); ecount = ecount + 1;
+            ineq_constraints{icount,1} = x_curr_layer(k) - alpha*v{j}(k); ineq_constraints{icount,2} = [j,k]; icount = icount + 1;
+            ineq_constraints{icount,1} = x_curr_layer(k) - beta*v{j}(k); ineq_constraints{icount,2} = [j,k]; icount = icount + 1;
+            eq_constraints{ecount,1} = (x_curr_layer(k) - alpha*v{j}(k))*(x_curr_layer(k) - beta*v{j}(k)); eq_constraints{ecount,2} = [j,k]; ecount = ecount + 1;
         end
         
         % Interval bounds
         %ineq_constraints{icount} = x_curr_layer(k) - X_min_curr_layer(k); icount = icount + 1;
         %ineq_constraints{icount} = -x_curr_layer(k) + X_max_curr_layer(k); icount = icount + 1;
-        ineq_constraints{icount} = (x_curr_layer(k) - X_min_curr_layer(k))*(-x_curr_layer(k) + X_max_curr_layer(k)); icount = icount + 1;
+        ineq_constraints{icount,1} = (x_curr_layer(k) - X_min_curr_layer(k))*(-x_curr_layer(k) + X_max_curr_layer(k)); ineq_constraints{icount,2} = [j,k]; icount = icount + 1;
         
     end
 end
@@ -103,36 +103,66 @@ for j = 1:length(dim_hidden)
     for k = 1:dim_hidden(j)
         
         % Two sector constraints
-        % Sector in right hand plane
-        if Y_max_curr_layer(k) > x_m
-            grad1a = (X_max_curr_layer(k) - sig(x_m))/(Y_max_curr_layer(k) - x_m);
-            c1a = X_max_curr_layer(k) - grad1a*Y_max_curr_layer(k);  
-        else
-            grad1a = 0; 
-            c1a = X_max_curr_layer(k);
-        end
-        ineq_constraints{icount} = (x_curr_layer(k) - (grad1a*v{j}(k) + c1a))*((grad_L_ub*v{j}(k) + c_L_ub) - x_curr_layer(k)); icount = icount + 1;
+        if Y_max_curr_layer(k) > 0 && Y_min_curr_layer(k) < 0
+            % Sector in right hand plane
+            if Y_max_curr_layer(k) > x_m
+                grad1a = (X_max_curr_layer(k) - sig(x_m))/(Y_max_curr_layer(k) - x_m);
+                c1a = X_max_curr_layer(k) - grad1a*Y_max_curr_layer(k);  
+            else
+                grad1a = 0; 
+                c1a = X_max_curr_layer(k);
+            end
+            ineq_constraints{icount,1} = (x_curr_layer(k) - (grad1a*v{j}(k) + c1a))*((grad_L_ub*v{j}(k) + c_L_ub) - x_curr_layer(k)); ineq_constraints{icount,2} = [j,k]; icount = icount + 1; 
+
+            % Sector in left hand plane
+            if Y_min_curr_layer(k) < -x_m
+                grad2a = (X_min_curr_layer(k) - sig(-x_m))/(Y_min_curr_layer(k) - -x_m);
+                c2a = X_min_curr_layer(k) - grad2a*Y_min_curr_layer(k);
+            else
+                grad2a = 0; 
+                c2a = X_min_curr_layer(k);
+            end
+            ineq_constraints{icount,1} = (x_curr_layer(k) - (grad2a*v{j}(k) + c2a))*((grad_L_lb*v{j}(k) + c_L_lb) - x_curr_layer(k)); ineq_constraints{icount,2} = [j,k]; icount = icount + 1; 
         
-        % Sector in left hand plane
-        if Y_min_curr_layer(k) < -x_m
-            grad2a = (X_min_curr_layer(k) - sig(-x_m))/(Y_min_curr_layer(k) - -x_m);
-            c2a = X_min_curr_layer(k) - grad2a*Y_min_curr_layer(k);
-        else
-            grad2a = 0; 
-            c2a = X_min_curr_layer(k);
+        elseif Y_max_curr_layer(k) < 0 && Y_min_curr_layer(k) < 0
+            Ysec = (Y_max_curr_layer(k) + Y_min_curr_layer(k))/2;
+            Xsec = sig(Ysec);
+            
+            grad1a = (X_max_curr_layer(k) - Xsec)/(Y_max_curr_layer(k) - Ysec);
+            c1a = X_max_curr_layer(k) - grad1a*Y_max_curr_layer(k); 
+            
+            grad2a = (X_min_curr_layer(k) - Xsec)/(Y_min_curr_layer(k) - Ysec);
+            c2a = X_min_curr_layer(k) - grad2a*Y_min_curr_layer(k); 
+            
+            ineq_constraints{icount,1} = (x_curr_layer(k) - (grad2a*v{j}(k) + c2a))*((grad1a*v{j}(k) + c1a) - x_curr_layer(k)); ineq_constraints{icount,2} = [j,k]; icount = icount + 1; 
+            
+        elseif Y_max_curr_layer(k) > 0 && Y_min_curr_layer(k) > 0
+            Ysec = (Y_max_curr_layer(k) + Y_min_curr_layer(k))/2;
+            Xsec = sig(Ysec);
+            
+            grad1a = (X_max_curr_layer(k) - Xsec)/(Y_max_curr_layer(k) - Ysec);
+            c1a = X_max_curr_layer(k) - grad1a*Y_max_curr_layer(k); 
+            
+            grad2a = (X_min_curr_layer(k) - Xsec)/(Y_min_curr_layer(k) - Ysec);
+            c2a = X_min_curr_layer(k) - grad2a*Y_min_curr_layer(k); 
+            
+            ineq_constraints{icount,1} = (x_curr_layer(k) - (grad1a*v{j}(k) + c1a))*((grad2a*v{j}(k) + c2a) - x_curr_layer(k)); ineq_constraints{icount,2} = [j,k]; icount = icount + 1; 
+            
         end
-        ineq_constraints{icount} = (x_curr_layer(k) - (grad2a*v{j}(k) + c2a))*((grad_L_lb*v{j}(k) + c_L_lb) - x_curr_layer(k)); icount = icount + 1;
         
-        % Plot the sectors  
-        % fplot(1/(1+exp(-x(1))))
-        % hold on
-        % fplot(grad1a*x(1) + c1a)
-        % fplot(grad2a*x(1) + c2a)
-        % fplot(grad_L_ub*x(1) + c_L_ub)
-        % fplot(grad_L_lb*x(1) + c_L_lb)
-           
+%         %Plot the sectors  
+%         fplot(1/(1+exp(-x(1))))
+%         hold on
+%         fplot(grad1a*x(1) + c1a)
+%         fplot(grad_L_ub*x(1) + c_L_ub)
+%         fplot(grad2a*x(1) + c2a)
+%         fplot(grad_L_lb*x(1) + c_L_lb)
+
+        % 0, 0.25 sector for test
+        %ineq_constraints{icount} = (x_curr_layer(k) - (0*v{j}(k) + 0.5))*((0.25*v{j}(k) + 0.5) - x_curr_layer(k)); icount = icount + 1;
+        
         % Pre-processing bounds
-        ineq_constraints{icount} = (x_curr_layer(k) - X_min_curr_layer(k))*(-x_curr_layer(k) + X_max_curr_layer(k)); icount = icount + 1;
+        ineq_constraints{icount,1} = (x_curr_layer(k) - X_min_curr_layer(k))*(-x_curr_layer(k) + X_max_curr_layer(k)); ineq_constraints{icount,2} = [j,k]; icount = icount + 1; 
     end
 end
 end
@@ -146,13 +176,13 @@ if strcmp(AF, 'tanh')
 x_m = 1.5;
 % Right side upper line L_ub
 syms d1
-d1 = solve(1 - (tanh(d1))^2 == (tanh(x_m) - tanh(d1))/(x_m - d1));
+d1 = vpasolve((1 - (tanh(d1))^2) == (tanh(x_m) - tanh(d1))/(x_m - d1),d1,[-10,0]);
 grad_L_ub = 1 - (tanh(d1))^2;
 c_L_ub = tanh(d1) - grad_L_ub*d1;
 
 % Left side upper line L_lb
 syms d2
-d2 = solve(1 - (tanh(d2))^2 == (tanh(-x_m) - tanh(d2))/(-x_m - d2));
+d2 = vpasolve((1 - (tanh(d2))^2) == (tanh(-x_m) - tanh(d2))/(-x_m - d2),d2,[0,10]);
 grad_L_lb = 1 - (tanh(d2))^2;
 c_L_lb = tanh(d2) - grad_L_lb*d2;
 
@@ -177,36 +207,63 @@ for j = 1:length(dim_hidden)
     for k = 1:dim_hidden(j)
 
         % Two sector constraints
-        % Sector in right hand plane 
-        if Y_max_curr_layer(k) > x_m
-            grad1a = (X_max_curr_layer(k) - tanh(x_m))/(Y_max_curr_layer(k) - x_m);
-            c1a = X_max_curr_layer(k) - grad1a*Y_max_curr_layer(k);  
-        else
-            grad1a = 0; 
-            c1a = X_max_curr_layer(k);
-        end
-        ineq_constraints{icount} = (x_curr_layer(k) - (grad1a*v{j}(k) + c1a))*((grad_L_ub*v{j}(k) + c_L_ub) - x_curr_layer(k)); icount = icount + 1;
+        if Y_max_curr_layer(k) > 0 && Y_min_curr_layer(k) < 0
+            % Sector in right hand plane 
+            if Y_max_curr_layer(k) > x_m
+                grad1a = (X_max_curr_layer(k) - tanh(x_m))/(Y_max_curr_layer(k) - x_m);
+                c1a = X_max_curr_layer(k) - grad1a*Y_max_curr_layer(k);  
+            else
+                grad1a = 0; 
+                c1a = X_max_curr_layer(k);
+            end
+            ineq_constraints{icount,1} = (x_curr_layer(k) - (grad1a*v{j}(k) + c1a))*((grad_L_ub*v{j}(k) + c_L_ub) - x_curr_layer(k)); ineq_constraints{icount,2} = [j,k]; icount = icount + 1; 
+
+            % Sector in left hand plane 
+            if Y_min_curr_layer(k) < -x_m
+                grad2a = (X_min_curr_layer(k) - tanh(-x_m))/(Y_min_curr_layer(k) - -x_m);
+                c2a = X_min_curr_layer(k) - grad2a*Y_min_curr_layer(k);
+            else
+                grad2a = 0; 
+                c2a = X_min_curr_layer(k);
+            end
+            ineq_constraints{icount,1} = (x_curr_layer(k) - (grad2a*v{j}(k) + c2a))*((grad_L_lb*v{j}(k) + c_L_lb) - x_curr_layer(k)); ineq_constraints{icount,2} = [j,k]; icount = icount + 1; 
         
-        % Sector in left hand plane 
-        if Y_min_curr_layer(k) < -x_m
-            grad2a = (X_min_curr_layer(k) - tanh(-x_m))/(Y_min_curr_layer(k) - -x_m);
-            c2a = X_min_curr_layer(k) - grad2a*Y_min_curr_layer(k);
-        else
-            grad2a = 0; 
-            c2a = X_min_curr_layer(k);
+        elseif Y_max_curr_layer(k) < 0 && Y_min_curr_layer(k) < 0
+            Ysec = (Y_max_curr_layer(k) + Y_min_curr_layer(k))/2;
+            Xsec = tanh(Ysec);
+            
+            grad1a = (X_max_curr_layer(k) - Xsec)/(Y_max_curr_layer(k) - Ysec);
+            c1a = X_max_curr_layer(k) - grad1a*Y_max_curr_layer(k); 
+            
+            grad2a = (X_min_curr_layer(k) - Xsec)/(Y_min_curr_layer(k) - Ysec);
+            c2a = X_min_curr_layer(k) - grad2a*Y_min_curr_layer(k); 
+            
+            ineq_constraints{icount,1} = (x_curr_layer(k) - (grad2a*v{j}(k) + c2a))*((grad1a*v{j}(k) + c1a) - x_curr_layer(k)); ineq_constraints{icount,2} = [j,k]; icount = icount + 1; 
+            
+        elseif Y_max_curr_layer(k) > 0 && Y_min_curr_layer(k) > 0
+            Ysec = (Y_max_curr_layer(k) + Y_min_curr_layer(k))/2;
+            Xsec = tanh(Ysec);
+            
+            grad1a = (X_max_curr_layer(k) - Xsec)/(Y_max_curr_layer(k) - Ysec);
+            c1a = X_max_curr_layer(k) - grad1a*Y_max_curr_layer(k); 
+            
+            grad2a = (X_min_curr_layer(k) - Xsec)/(Y_min_curr_layer(k) - Ysec);
+            c2a = X_min_curr_layer(k) - grad2a*Y_min_curr_layer(k); 
+            
+            ineq_constraints{icount,1} = (x_curr_layer(k) - (grad1a*v{j}(k) + c1a))*((grad2a*v{j}(k) + c2a) - x_curr_layer(k)); ineq_constraints{icount,2} = [j,k]; icount = icount + 1; 
+            
         end
-        ineq_constraints{icount} = (x_curr_layer(k) - (grad2a*v{j}(k) + c2a))*((grad_L_lb*v{j}(k) + c_L_lb) - x_curr_layer(k)); icount = icount + 1;
 
         % Plot sectors to test constraint
-        % fplot(tanh(x(1)))
-        % hold on
-        % fplot(grad1a*x(1) + c1a)
-        % fplot(grad_L_ub*x(1) + c_L_ub)
-        % fplot(grad2a*x(1) + c2a)
-        % fplot(grad_L_lb*x(1) + c_L_lb)
+        fplot(tanh(x(1)))
+        hold on
+        fplot(grad1a*x(1) + c1a)
+        fplot(grad_L_ub*x(1) + c_L_ub)
+        fplot(grad2a*x(1) + c2a)
+        fplot(grad_L_lb*x(1) + c_L_lb)
                
         % Pre-processing bounds
-        ineq_constraints{icount} = (x_curr_layer(k) - X_min_curr_layer(k))*(-x_curr_layer(k) + X_max_curr_layer(k)); icount = icount + 1;
+        ineq_constraints{icount,1} = (x_curr_layer(k) - X_min_curr_layer(k))*(-x_curr_layer(k) + X_max_curr_layer(k)); ineq_constraints{icount,2} = [j,k]; icount = icount + 1; 
     end
 end
 end

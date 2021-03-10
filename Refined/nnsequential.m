@@ -47,10 +47,10 @@ classdef nnsequential
                 end
             elseif(strcmp(obj.activation,'tanh'))
                 for l=1:num_layers
-                    Y = tanh((obj.weights{l})*Y+repmat(obj.biases{l}(:),1,size(Y,2)));
+                    Y = tanh((obj.weights{l})*Y + repmat(obj.biases{l}(:),1,size(Y,2)));
                 end
             end
-            Y = obj.weights{end}*Y+repmat(obj.biases{end}(:),1,size(Y,2));
+            Y = obj.weights{end}*Y + repmat(obj.biases{end}(:),1,size(Y,2));
         end
         
         function Y = activate(obj,X)
