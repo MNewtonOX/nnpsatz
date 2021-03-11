@@ -1,5 +1,5 @@
 % Function for hidden layer constraints
-function [eq_constraints, ineq_constraints,eq_rep_constraints,ineq_rep_constraints] = hiddenLayerConstraintsTwoSectors(net,AF,u_min,u_max,u,x,y,dim_in,dim_hidden,dim_out,repeated)
+function [eq_constraints, ineq_constraints] = hiddenLayerConstraintsTwoSectors_old(net,AF,u_min,u_max,u,x,y,dim_in,dim_hidden,dim_out,repeated)
 
 W = net.weights;
 b = net.biases;
@@ -7,13 +7,8 @@ b = net.biases;
 % Create cell for constraints
 ineq_constraints = {};
 eq_constraints = {};
-ineq_rep_constraints = {};
-eq_rep_constraints = {};
-
 icount = 1; %inequality
 ecount = 1; %equality
-ircount = 1; %inequality repeated
-ercount = 1; %equality repeated
 
 %% ReLU
 if strcmp(AF, 'relu')
@@ -298,7 +293,7 @@ if repeated == 1
             x2 = x(k); v2 = v_temp(k);
             %ineq_constraints{icount} = (x2 - x1)*(v2 - v1) - 0*(v2 - v1)^2; icount = icount + 1;
             %ineq_constraints{icount} = 1*(v2 - v1)^2 - (x2 - x1)*(v2 - v1); icount = icount + 1;
-            ineq_rep_constraints{ircount} = ((x2 - x1) - 0*(v2 - v1))*(1*(v2 - v1) - (x2 - x1)); ircount = ircount + 1;
+            ineq_constraints{icount} = ((x2 - x1) - 0*(v2 - v1))*(1*(v2 - v1) - (x2 - x1)); icount = icount + 1;
         end
     end
 end
@@ -317,7 +312,7 @@ for j = 1:length(dim_hidden)
     end
     for k = 1:dim_hidden(j)
         for m = k:dim_hidden(j)
-            ineq_rep_constraints{ircount} = -(x_curr_layer(k) - x_curr_layer(m) - 0)*(x_curr_layer(k) - x_curr_layer(m) - 1*(v{j}(k) - v{j}(m))); ircount = ircount + 1;  
+            ineq_constraints{icount} = -(x_curr_layer(k) - x_curr_layer(m) - 0)*(x_curr_layer(k) - x_curr_layer(m) - 1*(v{j}(k) - v{j}(m))); icount = icount + 1;  
         end
     end
 end    
@@ -337,13 +332,13 @@ for j = 1:length(dim_hidden)
     end
     for k = 1:dim_hidden(j)
         for m = k:dim_hidden(j)
-            ineq_rep_constraints{ircount} = -(x_curr_layer(k) - x_curr_layer(m) - 0)*(x_curr_layer(k) - x_curr_layer(m) - 1*(v{j}(k) - v{j}(m))); ircount = ircount + 1;  
+            ineq_constraints{icount} = -(x_curr_layer(k) - x_curr_layer(m) - 0)*(x_curr_layer(k) - x_curr_layer(m) - 1*(v{j}(k) - v{j}(m))); icount = icount + 1;  
         end
     end
     if j > 1
         for k = 1:dim_hidden(j)
             for m = 1:dim_hidden(j-1)
-                ineq_rep_constraints{ircount} = -(x_curr_layer(k) - x_prev_layer(m) - 0)*(x_curr_layer(k) - x_prev_layer(m) - 1*(v{j}(k) - v{j-1}(m))); ircount = ircount + 1;
+                ineq_constraints{icount} = -(x_curr_layer(k) - x_prev_layer(m) - 0)*(x_curr_layer(k) - x_prev_layer(m) - 1*(v{j}(k) - v{j-1}(m))); icount = icount + 1;
             end
         end
     end
@@ -373,11 +368,11 @@ for j = 1:length(dim_hidden)
             node_num_m = sum(dim_hidden(1:j-1)) + m;
 
             if any(node_num_k == Ip) && any(node_num_m == Ip)
-                eq_rep_constraints{ercount} = x_curr_layer(k) - x_curr_layer(m) - (v{j}(k) - v{j}(m)); ercount = ercount + 1;                
+                eq_constraints{ecount} = x_curr_layer(k) - x_curr_layer(m) - (v{j}(k) - v{j}(m)); ecount = ecount + 1;                
             elseif any(node_num_k == In) && any(node_num_m == In)
-                eq_rep_constraints{ercount} = x_curr_layer(k) - x_curr_layer(m); ercount = ercount + 1;
+                eq_constraints{ecount} = x_curr_layer(k) - x_curr_layer(m); ecount = ecount + 1;
             else
-                ineq_rep_constraints{ircount} = -(x_curr_layer(k) - x_curr_layer(m) - 0)*(x_curr_layer(k) - x_curr_layer(m) - 1*(v{j}(k) - v{j}(m))); ircount = ircount + 1;                
+                ineq_constraints{icount} = -(x_curr_layer(k) - x_curr_layer(m) - 0)*(x_curr_layer(k) - x_curr_layer(m) - 1*(v{j}(k) - v{j}(m))); icount = icount + 1;                
             end     
         end
     end
@@ -407,11 +402,11 @@ if repeated == 5 && strcmp(AF, 'relu')
             x2 = x(k); v2 = v_temp(k);
 
             if any(j == Ip) && any(k == Ip)
-                eq_rep_constraints{ercount} = x1 - x2 - (v1 - v2); ercount = ercount + 1;                
+                eq_constraints{ecount} = x1 - x2 - (v1 - v2); ecount = ecount + 1;                
             elseif any(j == In) && any(k == In)
-                eq_rep_constraints{ercount} = x1 - x2; ercount = ercount + 1;
+                eq_constraints{ecount} = x1 - x2; ecount = ecount + 1;
             else
-                ineq_rep_constraints{ircount} = -(x1 - x2 - 0)*(x1 - x2 - 1*(v1 - v2)); ircount = ircount + 1;                
+                ineq_constraints{icount} = -(x1 - x2 - 0)*(x1 - x2 - 1*(v1 - v2)); icount = icount + 1;                
             end     
         end
     end

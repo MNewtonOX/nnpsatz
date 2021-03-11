@@ -1,4 +1,4 @@
-function [prog,expr] = assembleConstraints(prog,vars,ineq_constraints,eq_constraints,con_in1,con_in2,f,net,con_type,sos_order,sos_type)
+function [prog,expr] = assembleConstraints(prog,vars,ineq_constraints,eq_constraints,eq_rep_constraints,ineq_rep_constraints,repeated,con_in1,con_in2,f,net,con_type,sos_order,sos_type)
 
 % Extract dimensions
 dims = net.dims;
@@ -36,7 +36,22 @@ for j = 1:dim_in
     expr = expr - s_in{j}*con_in1(j)*con_in2(j);
 end
 
-%end
+% Repeated non-linearities constraints, they are treated seperately and
+% have fixed multiplier. 
+if repeated >= 1
+    r = cell(size(ineq_rep_constraints,1),1);
+    for j = 1:size(ineq_rep_constraints,1)
+       [prog,r{j}] = sospolyvar(prog,monomials(vars,0:a));
+       prog = sosineq(prog,r{j});
+       expr = expr - r{j}*ineq_rep_constraints{j,1};
+    end
+    
+    r2 = cell(size(eq_rep_constraints,1),1);
+    for j = 1:size(eq_rep_constraints,1)
+       [prog,r2{j}] = sospolyvar(prog,monomials(vars,0:a));
+       expr = expr - r2{j}*eq_rep_constraints{j,1};
+    end
+end
 
 if con_type == 1 || con_type == 2
 

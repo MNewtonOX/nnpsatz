@@ -29,7 +29,7 @@ con_in1 = u - u_min;
 con_in2 = u_max - u;
 
 % Function for hidden layer constraints
-[eq_constraints, ineq_constraints] = hiddenLayerConstraintsTwoSectors(net,AF,u_min,u_max,u,x,y,dim_in,dim_hidden,dim_out,repeated);
+[eq_constraints, ineq_constraints,eq_rep_constraints,ineq_rep_constraints] = hiddenLayerConstraintsTwoSectors(net,AF,u_min,u_max,u,x,y,dim_in,dim_hidden,dim_out,repeated);
 
 % Output layer constraints
 v_out = W{end}*x(end - dim_hidden(end) + 1 : end) + b{end};
@@ -39,7 +39,7 @@ elseif dim_out == 2
     f = c.'*v_out - y;
 end
 
-[prog,expr] = assembleConstraints(prog,vars,ineq_constraints,eq_constraints,con_in1,con_in2,f,net,con_type,sos_order,sos_type);
+[prog,expr] = assembleConstraints(prog,vars,ineq_constraints,eq_constraints,eq_rep_constraints,ineq_rep_constraints,repeated,con_in1,con_in2,f,net,con_type,sos_order,sos_type);
     
 % P-satz refutation
 prog = sosineq(prog,expr);
