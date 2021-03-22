@@ -12,45 +12,80 @@ a = sos_order;
 % Create statement 1 + cone + ideal
 expr = - f;
 
-% Add all constraints and their multipliers together
-s = cell(size(ineq_constraints,1),1);
-for j = 1:size(ineq_constraints,1)
-    [prog,s{j}] = setPolynomials(prog,vars,a,sos_type,ineq_constraints{j,1},ineq_constraints{j,2},dims);
-    %[prog,s{j}] = sospolyvar(prog,monomials(vars,0:a));
-    prog = sosineq(prog,s{j});
-    expr = expr - s{j}*ineq_constraints{j,1};
+if con_type == 0 || con_type == 1 || con_type == 2 || con_type == 3 || con_type == 4 || con_type == 5 || con_type == 6 || con_type == 7
+
+    % Add all constraints and their multipliers together
+    s = cell(size(ineq_constraints,1),1);
+    for j = 1:size(ineq_constraints,1)
+        if a > 0
+            [prog,s{j}] = setPolynomials(prog,vars,a,sos_type,ineq_constraints{j,1},ineq_constraints{j,2},dims);
+            prog = sosineq(prog,s{j});
+        else
+            %[prog,s{j}] = sospolyvar(prog,monomials(vars,0:a));
+            [prog,s{j}] = sossosvar(prog,1);
+        end
+        expr = expr - s{j}*ineq_constraints{j,1};
+    end
+
+    t = cell(size(eq_constraints,1),1);
+    for j = 1:size(eq_constraints,1)
+        [prog,t{j}] = setPolynomials(prog,vars,a,sos_type,eq_constraints{j,1},eq_constraints{j,2},dims);
+        %[prog,t{j}] = sospolyvar(prog,monomials(vars,0:a));
+        expr = expr - t{j}*eq_constraints{j,1};
+    end
+
+    % Input layer constraints
+    s_in = cell(dim_in,1);
+    for j = 1:dim_in
+        if a > 0
+            [prog,s_in{j}] = setPolynomials(prog,vars,a,sos_type,con_in1(j)*con_in2(j),[0,j],dims);
+            prog = sosineq(prog,s_in{j});
+        else
+            [prog,s_in{j}] = sossosvar(prog,1);
+        end     
+        expr = expr - s_in{j}*con_in1(j)*con_in2(j);
+    end
+
 end
 
-t = cell(size(eq_constraints,1),1);
-for j = 1:size(eq_constraints,1)
-    [prog,t{j}] = setPolynomials(prog,vars,a,sos_type,eq_constraints{j,1},eq_constraints{j,2},dims);
-    %[prog,t{j}] = sospolyvar(prog,monomials(vars,0:a));
-    expr = expr - t{j}*eq_constraints{j,1};
-end
-
-% Input layer constraints
-s_in = cell(dim_in,1);
-for j = 1:dim_in
-    [prog,s_in{j}] = setPolynomials(prog,vars,a,sos_type,con_in1(j)*con_in2(j),[0,j],dims);
-    prog = sosineq(prog,s_in{j});
-    expr = expr - s_in{j}*con_in1(j)*con_in2(j);
-end
 
 % Repeated non-linearities constraints, they are treated seperately and
 % have fixed multiplier. 
 if repeated >= 1
-    r = cell(size(ineq_rep_constraints,1),1);
-    for j = 1:size(ineq_rep_constraints,1)
-       [prog,r{j}] = sospolyvar(prog,monomials(vars,0:a));
-       prog = sosineq(prog,r{j});
-       expr = expr - r{j}*ineq_rep_constraints{j,1};
+    r = cell(size(ineq_rep_constraints,2),1);
+    for j = 1:size(ineq_rep_constraints,2)
+        if a > 0
+            [prog,r{j}] = sospolyvar(prog,monomials(vars,0:a));
+            prog = sosineq(prog,r{j});
+        else
+            [prog,r{j}] = sossosvar(prog,1);
+        end
+       expr = expr - r{j}*ineq_rep_constraints{j};
     end
     
-    r2 = cell(size(eq_rep_constraints,1),1);
-    for j = 1:size(eq_rep_constraints,1)
-       [prog,r2{j}] = sospolyvar(prog,monomials(vars,0:a));
-       expr = expr - r2{j}*eq_rep_constraints{j,1};
+    r2 = cell(size(eq_rep_constraints,2),1);
+    for j = 1:size(eq_rep_constraints,2)
+        if a > 0
+            [prog,r2{j}] = sospolyvar(prog,monomials(vars,0:a));
+        else
+            [prog,r2{j}] = sossosvar(prog,1);
+        end
+       expr = expr - r2{j}*eq_rep_constraints{j};
     end
+    
+%     r3 = cell(size(ineq_rep_constraints,2),size(ineq_rep_constraints,2));
+%     for j = 1:size(ineq_rep_constraints,2)
+%         for k = 1:size(ineq_rep_constraints,2)
+%             if a > 0
+%                 [prog,r3{j,k}] = sospolyvar(prog,monomials(vars,0:a));
+%                 prog = sosineq(prog,r3{j,k});
+%             else
+%                 [prog,r3{j,k}] = sossosvar(prog,1);
+%             end
+%            expr = expr - r3{j,k}*ineq_rep_constraints{j}*ineq_rep_constraints{k};
+%         end
+%     end
+    
 end
 
 if con_type == 1 || con_type == 2
@@ -59,8 +94,12 @@ if con_type == 1 || con_type == 2
 s2 = cell(size(ineq_constraints,1),size(ineq_constraints,1));
 for j = 1:size(ineq_constraints,1)
     for k = j+1:size(ineq_constraints,1)
-        [prog,s2{j,k}] = sospolyvar(prog,monomials(vars,0:a));
-        prog = sosineq(prog,s2{j,k});
+        if a > 0
+            [prog,s2{j,k}] = sospolyvar(prog,monomials(vars,0:a));
+            prog = sosineq(prog,s2{j,k});
+        else 
+            [prog,s2{j,k}] = sossosvar(prog,1);
+        end      
         expr = expr - s2{j,k}*ineq_constraints{j,1}*ineq_constraints{k,1};
     end
 end
@@ -75,10 +114,15 @@ s3 = cell(size(ineq_constraints,1),dim_in);
 s4 = cell(size(ineq_constraints,1),dim_in);
 for j = 1:size(ineq_constraints,1)
     for k = 1:dim_in
-        [prog,s3{j,k}] = sospolyvar(prog,monomials(vars,0:a));
-        prog = sosineq(prog,s3{j,k});
-        [prog,s4{j,k}] = sospolyvar(prog,monomials(vars,0:a));
-        prog = sosineq(prog,s4{j,k});
+        if a > 0
+            [prog,s3{j,k}] = sospolyvar(prog,monomials(vars,0:a));
+            prog = sosineq(prog,s3{j,k});
+            [prog,s4{j,k}] = sospolyvar(prog,monomials(vars,0:a));
+            prog = sosineq(prog,s4{j,k});
+        else
+            [prog,s3{j,k}] = sossosvar(prog,1);
+            [prog,s4{j,k}] = sossosvar(prog,1);
+        end
         %expr = expr - s3{j,k}*ineq_constraints{j}*con_in1(k)*con_in2(k);
         expr = expr - s3{j,k}*ineq_constraints{j,1}*con_in1(k);
         expr = expr - s4{j,k}*ineq_constraints{j,1}*con_in2(k);
@@ -96,8 +140,12 @@ for j = 1:size(ineq_constraints,1)
     for k = j+1:size(ineq_constraints,1)
         if ineq_constraints{j,2}(1) == ineq_constraints{k,2}(1)
             if ineq_constraints{j,2}(2) == ineq_constraints{k,2}(2)
-                [prog,s2{j,k}] = sospolyvar(prog,monomials(vars,0:a));
-                prog = sosineq(prog,s2{j,k});
+                if a > 0
+                    [prog,s2{j,k}] = sospolyvar(prog,monomials(vars,0:a));
+                    prog = sosineq(prog,s2{j,k});
+                else
+                    [prog,s2{j,k}] = sossosvar(prog,1);
+                end
                 expr = expr - s2{j,k}*ineq_constraints{j,1}*ineq_constraints{k,1};       
             end
         end
@@ -113,9 +161,13 @@ if con_type == 4
 %s2 = cell(size(ineq_constraints,1),size(ineq_constraints,1));
 for j = 1:size(ineq_constraints,1)
     for k = j+1:size(ineq_constraints,1)
-        if ineq_constraints{j,2}(1) == ineq_constraints{k,2}(1)          
-            [prog,s2{j,k}] = sospolyvar(prog,monomials(vars,0:a));
-            prog = sosineq(prog,s2{j,k});
+        if ineq_constraints{j,2}(1) == ineq_constraints{k,2}(1)    
+            if a > 0
+                [prog,s2{j,k}] = sospolyvar(prog,monomials(vars,0:a));
+                prog = sosineq(prog,s2{j,k});
+            else
+                [prog,s2{j,k}] = sossosvar(prog,1);
+            end
             expr = expr - s2{j,k}*ineq_constraints{j,1}*ineq_constraints{k,1};       
         end
     end
@@ -129,9 +181,13 @@ if con_type == 5 || con_type == 6
 % Multiply all constraints within the same layer and neighbouring layers
 for j = 1:size(ineq_constraints,1)
     for k = j+1:size(ineq_constraints,1)
-        if (ineq_constraints{j,2}(1) == ineq_constraints{k,2}(1)) || (ineq_constraints{j,2}(1) == ineq_constraints{k,2}(1) - 1)          
-            [prog,s2{j,k}] = sospolyvar(prog,monomials(vars,0:a));
-            prog = sosineq(prog,s2{j,k});
+        if (ineq_constraints{j,2}(1) == ineq_constraints{k,2}(1)) || (ineq_constraints{j,2}(1) == ineq_constraints{k,2}(1) - 1)        
+            if a > 0
+                [prog,s2{j,k}] = sospolyvar(prog,monomials(vars,0:a));
+                prog = sosineq(prog,s2{j,k});
+            else
+               [prog,s2{j,k}] = sossosvar(prog,1); 
+            end
             expr = expr - s2{j,k}*ineq_constraints{j,1}*ineq_constraints{k,1};       
         end
     end
@@ -144,16 +200,114 @@ if con_type == 5
 for j = 1:size(ineq_constraints,1) 
     if ineq_constraints{j,2}(1) == 1
         for k = 1:dim_in
-            [prog,s3{j}] = sospolyvar(prog,monomials(vars,0:a));
-            prog = sosineq(prog,s3{j});
-            [prog,s4{j}] = sospolyvar(prog,monomials(vars,0:a));
-            prog = sosineq(prog,s4{j});
+            if a > 0
+                [prog,s3{j}] = sospolyvar(prog,monomials(vars,0:a));
+                prog = sosineq(prog,s3{j});
+                [prog,s4{j}] = sospolyvar(prog,monomials(vars,0:a));
+                prog = sosineq(prog,s4{j});
+            else
+               [prog,s3{j}] = sossosvar(prog,1);
+               [prog,s4{j}] = sossosvar(prog,1);
+            end
             expr = expr - s3{j}*ineq_constraints{j,1}*con_in1(k);
             expr = expr - s4{j}*ineq_constraints{j,1}*con_in2(k);    
         end
     end
 end
 
+end
+
+if con_type == 7
+
+% Multiply all constraints within the neighbouring layers
+for j = 1:size(ineq_constraints,1)
+    for k = j+1:size(ineq_constraints,1)
+        if (ineq_constraints{j,2}(1) == ineq_constraints{k,2}(1) - 1)        
+            if a > 0
+                [prog,s2{j,k}] = sospolyvar(prog,monomials(vars,0:a));
+                prog = sosineq(prog,s2{j,k});
+            else
+               [prog,s2{j,k}] = sossosvar(prog,1); 
+            end
+            expr = expr - s2{j,k}*ineq_constraints{j,1}*ineq_constraints{k,1};       
+        end
+    end
+end
+
+end
+ 
+
+% Multiply all constraints such that order of the program is quadratic
+if con_type == 8
+%     for j = 1:size(ineq_constraints,1)
+%         if polynomialDegree(ineq_constraints{j,1}) ~= 2
+%                 test = 1;
+%         end
+%     end
+%     
+%     return
+    s = cell(size(ineq_constraints,1),1);
+    s2 = cell(size(ineq_constraints,1),size(ineq_constraints,1));
+    t = cell(size(eq_constraints,1),1);
+    t2 = cell(size(eq_constraints,1),size(eq_constraints,1));
+    for j = 1:size(ineq_constraints,1)
+        
+        %[prog,s{j}] = sospolyvar(prog,monomials(vars,0:a));
+        if polynomialDegree(ineq_constraints{j,1}) == 2
+            [prog,s{j}] = setPolynomials(prog,vars,a,sos_type,ineq_constraints{j,1},ineq_constraints{j,2},dims);
+            prog = sosineq(prog,s{j});
+            expr = expr - s{j}*ineq_constraints{j,1};
+        end
+        if polynomialDegree(ineq_constraints{j,1}) > 2
+
+        end
+        
+        if polynomialDegree(ineq_constraints{j,1}) == 1
+            [prog,s{j}] = setPolynomials(prog,vars,a,sos_type,ineq_constraints{j,1},ineq_constraints{j,2},dims);
+            prog = sosineq(prog,s{j});
+            expr = expr - s{j}*ineq_constraints{j,1};
+            [prog,s2{j}] = setPolynomials(prog,vars,a,sos_type,ineq_constraints{j,1},ineq_constraints{j,2},dims);
+            prog = sosineq(prog,s2{j});
+            expr = expr - s{j}*ineq_constraints{j,1}*ineq_constraints{j,1};
+        end
+        
+    end
+%         if polynomialDegree(ineq_constraints{j,1}) == 1
+%             for k = 1:size(ineq_constraints,1)
+%                 if polynomialDegree(ineq_constraints{k,1}) == 1
+%                     if j ~= k
+%                         [prog,s2{j}] = setPolynomials(prog,vars,a,sos_type,ineq_constraints{j,1},ineq_constraints{j,2},dims);
+%                         prog = sosineq(prog,s2{j,k});
+%                         expr = expr - s{j}*ineq_constraints{j,1}*ineq_constraints{k,1};
+%                     end
+%                 end
+%             end
+%         end
+
+    for j = 1:size(eq_constraints,1)
+        
+        if polynomialDegree(eq_constraints{j,1}) == 2
+            [prog,t{j}] = setPolynomials(prog,vars,a,sos_type,eq_constraints{j,1},eq_constraints{j,2},dims);
+            expr = expr - t{j}*eq_constraints{j,1};
+        end
+        
+        %if polynomialDegree(eq_constraints{j,1}) == 1
+        %    [prog,t{j}] = setPolynomials(prog,vars,a,sos_type,eq_constraints{j,1},eq_constraints{j,2},dims);
+        %    expr = expr - t{j}*eq_constraints{j,1};
+        %    [prog,t2{j}] = setPolynomials(prog,vars,a,sos_type,eq_constraints{j,1},eq_constraints{j,2},dims);
+        %    expr = expr - t2{j}*eq_constraints{j,1}*eq_constraints{j,1};
+        %end
+
+    end 
+
+    % Input layer constraints
+    s_in = cell(dim_in,1);
+    for j = 1:dim_in
+        [prog,s_in{j}] = setPolynomials(prog,vars,a,sos_type,con_in1(j)*con_in2(j),[0,j],dims);
+        prog = sosineq(prog,s_in{j});
+        expr = expr - s_in{j}*con_in1(j)*con_in2(j);
+    end
+    
 end
 
 end

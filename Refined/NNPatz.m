@@ -14,13 +14,22 @@ b = net.biases;
 AF = net.activation;
 
 % Create symbolic variables
-syms u [dim_in,1]
-syms x [sum(dim_hidden),1]
+mpvar( 'u', [dim_in,1])
+mpvar( 'x', [sum(dim_hidden),1])
 %syms y [dim_out,1]
-syms y [1,1]
+%mpvar( 'y', [dim_out,1])
+mpvar( 'y', [1,1])
+%pvar u x1 x2 x3 x4 y
+%x = [x1;x2;x3;x4];
+
+%syms u [dim_in,1]
+%syms x [sum(dim_hidden),1]
+%syms y [dim_out,1]
+%syms y [1,1]
 
 % Set variables and decision varaibles in SOS
 vars = [u; x]; 
+%prog = sosprogram(vars,y);
 prog = sosprogram(vars);
 prog = sosdecvar(prog,y);
 
@@ -29,7 +38,8 @@ con_in1 = u - u_min;
 con_in2 = u_max - u;
 
 % Function for hidden layer constraints
-[eq_constraints, ineq_constraints,eq_rep_constraints,ineq_rep_constraints] = hiddenLayerConstraintsTwoSectors(net,AF,u_min,u_max,u,x,y,dim_in,dim_hidden,dim_out,repeated);
+%[eq_constraints, ineq_constraints,eq_rep_constraints,ineq_rep_constraints] = hiddenLayerConstraintsTwoSectors(net,AF,u_min,u_max,u,x,y,dim_in,dim_hidden,dim_out,repeated);
+[eq_constraints, ineq_constraints,eq_rep_constraints,ineq_rep_constraints] = hiddenLayerConstraintsOneSector(net,AF,u_min,u_max,u,x,y,dim_in,dim_hidden,dim_out,repeated);
 
 % Output layer constraints
 v_out = W{end}*x(end - dim_hidden(end) + 1 : end) + b{end};
@@ -48,7 +58,7 @@ if dim_out == 1
 elseif dim_out == 2
     prog = sossetobj(prog,y);
 end
-solver_opt.solver = 'sdpt3'; % put this outside function eventually
+solver_opt.solver = 'sdpt3';%'sdpt3'; % put this outside function eventually
 prog = sossolve(prog,solver_opt);
 SOLy = sosgetsol(prog,y);
 

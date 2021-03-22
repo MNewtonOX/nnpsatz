@@ -1,5 +1,5 @@
 % Function for hidden layer constraints
-function [eq_constraints, ineq_constraints,eq_rep_constraints,ineq_rep_constraints] = hiddenLayerConstraintsTwoSectors(net,AF,u_min,u_max,u,x,y,dim_in,dim_hidden,dim_out,repeated)
+function [eq_constraints, ineq_constraints,eq_rep_constraints,ineq_rep_constraints] = hiddenLayerConstraintsTwoSectorsAlt(net,AF,u_min,u_max,u,x,y,dim_in,dim_hidden,dim_out,repeated,resultsValues)
 
 W = net.weights;
 b = net.biases;
@@ -73,23 +73,6 @@ end
 if strcmp(AF, 'sigmoid')
 [Y_min,Y_max,X_min,X_max] = interval_bound_propigation(u_min,u_max,dim_hidden,net);
 
-% Compute upper sector lines, which are tangent to the sigmoid curve
-x_m = 1;%1.5;
-% Right side upper line L_ub
-syms d1
-d1 = solve(sig(d1)*(1 - sig(d1)) == (sig(x_m) - sig(d1))/(x_m - d1));
-grad_L_ub = sig(d1)*(1 - sig(d1));
-grad_L_ub = double(grad_L_ub);
-c_L_ub = sig(d1) - grad_L_ub*d1;
-c_L_ub = double(c_L_ub);
-
-% Left side upper line L_lb
-syms d2
-d2 = solve(sig(d2)*(1 - sig(d2)) == (sig(-x_m) - sig(d2))/(-x_m - d2));
-grad_L_lb = sig(d2)*(1 - sig(d2));
-grad_L_lb = double(grad_L_lb);
-c_L_lb = sig(d2) - grad_L_lb*d2;
-c_L_lb = double(c_L_lb);
 
 for j = 1:length(dim_hidden)
     if j == 1
@@ -110,38 +93,61 @@ for j = 1:length(dim_hidden)
         Y_max_curr_layer = Y_max(sum(dim_hidden(1:j-1)) + 1 : sum(dim_hidden(1:j)));
     end
     for k = 1:dim_hidden(j)
+        %rounded = 4*[Y_min,Y_max];
+        if 2 < 1%Y_min_curr_layer(k) <= -2.5
+        [~,index1] = min(abs(4*resultsValues.bounds(:,1) - 4*Y_min_curr_layer(k)));
+        [~,index2] = min(abs(4*resultsValues.bounds(:,2) - 4*Y_max_curr_layer(k)));
+        x_ml = resultsValues.minCoord(index1,1);
+        x_mu = resultsValues.minCoord(index2,2);
+        %index = find(resultsValues.bounds == )
+        % Compute upper sector lines, which are tangent to the sigmoid curve
+        %x_m = 1.5;
+        % Right side upper line L_ub
+        syms d1
+        d1 = solve(sig(d1)*(1 - sig(d1)) == (sig(x_mu) - sig(d1))/(x_mu - d1));
+        grad_L_ub = sig(d1)*(1 - sig(d1));
+        c_L_ub = sig(d1) - grad_L_ub*d1;
+
+        % Left side upper line L_lb
+        syms d2
+        d2 = solve(sig(d2)*(1 - sig(d2)) == (sig(x_ml) - sig(d2))/(x_ml - d2));
+        grad_L_lb = sig(d2)*(1 - sig(d2));
+        c_L_lb = sig(d2) - grad_L_lb*d2;
+        else
+            x_mu = 1.5;
+            x_ml = -1.5;
+            % Right side upper line L_ub
+            syms d1
+            d1 = solve(sig(d1)*(1 - sig(d1)) == (sig(x_mu) - sig(d1))/(x_mu - d1));
+            grad_L_ub = sig(d1)*(1 - sig(d1));
+            c_L_ub = sig(d1) - grad_L_ub*d1;
+
+            % Left side upper line L_lb
+            syms d2
+            d2 = solve(sig(d2)*(1 - sig(d2)) == (sig(x_ml) - sig(d2))/(x_ml - d2));
+            grad_L_lb = sig(d2)*(1 - sig(d2));
+            c_L_lb = sig(d2) - grad_L_lb*d2;
+        end
         
         % Two sector constraints
         if Y_max_curr_layer(k) > 0 && Y_min_curr_layer(k) < 0
             % Sector in right hand plane
-            if Y_max_curr_layer(k) > x_m
-                grad1a = (X_max_curr_layer(k) - sig(x_m))/(Y_max_curr_layer(k) - x_m);
+            if Y_max_curr_layer(k) > x_mu
+                grad1a = (X_max_curr_layer(k) - sig(x_mu))/(Y_max_curr_layer(k) - x_mu);
                 c1a = X_max_curr_layer(k) - grad1a*Y_max_curr_layer(k);  
-                % Check for overlapping sectors
-                if X_min_curr_layer(k) >  Y_min_curr_layer(k)*grad1a + c1a
-                    grad1a = (X_min_curr_layer(k) - sig(x_m))/(Y_min_curr_layer(k) - x_m);
-                    c1a = X_min_curr_layer(k) - grad1a*Y_min_curr_layer(k);  
-                end
             else
                 grad1a = 0; 
-                %c1a = X_max_curr_layer(k);
-                c1a = sig(x_m);
+                c1a = X_max_curr_layer(k);
             end
             ineq_constraints{icount,1} = (x_curr_layer(k) - (grad1a*v{j}(k) + c1a))*((grad_L_ub*v{j}(k) + c_L_ub) - x_curr_layer(k)); ineq_constraints{icount,2} = [j,k]; icount = icount + 1; 
 
             % Sector in left hand plane
-            if Y_min_curr_layer(k) < -x_m
-                grad2a = (X_min_curr_layer(k) - sig(-x_m))/(Y_min_curr_layer(k) - -x_m);
+            if Y_min_curr_layer(k) < x_ml
+                grad2a = (X_min_curr_layer(k) - sig(x_ml))/(Y_min_curr_layer(k) - x_ml);
                 c2a = X_min_curr_layer(k) - grad2a*Y_min_curr_layer(k);
-                % Check for overlapping sectors
-                if X_max_curr_layer(k) <  Y_max_curr_layer(k)*grad2a + c2a
-                    grad2a = (X_max_curr_layer(k) - sig(-x_m))/(Y_max_curr_layer(k) - -x_m);
-                    c2a = X_max_curr_layer(k) - grad2a*Y_max_curr_layer(k);  
-                end
             else
                 grad2a = 0; 
-                %c2a = X_min_curr_layer(k);
-                c2a = sig(-x_m);
+                c2a = X_min_curr_layer(k);
             end
             ineq_constraints{icount,1} = (x_curr_layer(k) - (grad2a*v{j}(k) + c2a))*((grad_L_lb*v{j}(k) + c_L_lb) - x_curr_layer(k)); ineq_constraints{icount,2} = [j,k]; icount = icount + 1; 
         
@@ -194,23 +200,18 @@ if strcmp(AF, 'tanh')
 [Y_min,Y_max,X_min,X_max] = interval_bound_propigation(u_min,u_max,dim_hidden,net);
 
 % Compute upper sector lines, which are tangent to the sigmoid curve
-x_m = 1.1;%0.25;%0.75;%1.5;
+x_m = 0.75;%1.5;
 % Right side upper line L_ub
 syms d1
-d3 = d1;
 d1 = vpasolve((1 - (tanh(d1))^2) == (tanh(x_m) - tanh(d1))/(x_m - d1),d1,[-10,0]);
 grad_L_ub = 1 - (tanh(d1))^2;
-grad_L_ub = double(grad_L_ub);
 c_L_ub = tanh(d1) - grad_L_ub*d1;
-c_L_ub = double(c_L_ub);
 
 % Left side upper line L_lb
 syms d2
 d2 = vpasolve((1 - (tanh(d2))^2) == (tanh(-x_m) - tanh(d2))/(-x_m - d2),d2,[0,10]);
 grad_L_lb = 1 - (tanh(d2))^2;
-grad_L_lb = double(grad_L_lb);
 c_L_lb = tanh(d2) - grad_L_lb*d2;
-c_L_lb = double(c_L_lb);
 
 for j = 1:length(dim_hidden)
     if j == 1
@@ -238,15 +239,9 @@ for j = 1:length(dim_hidden)
             if Y_max_curr_layer(k) > x_m
                 grad1a = (X_max_curr_layer(k) - tanh(x_m))/(Y_max_curr_layer(k) - x_m);
                 c1a = X_max_curr_layer(k) - grad1a*Y_max_curr_layer(k);  
-                % Check for overlapping sectors
-                if X_min_curr_layer(k) >  Y_min_curr_layer(k)*grad1a + c1a
-                    grad1a = (X_min_curr_layer(k) - tanh(x_m))/(Y_min_curr_layer(k) - x_m);
-                    c1a = X_min_curr_layer(k) - grad1a*Y_min_curr_layer(k);  
-                end
             else
                 grad1a = 0; 
-                %c1a = X_max_curr_layer(k);
-                c1a = tanh(x_m);
+                c1a = X_max_curr_layer(k);
             end
             ineq_constraints{icount,1} = (x_curr_layer(k) - (grad1a*v{j}(k) + c1a))*((grad_L_ub*v{j}(k) + c_L_ub) - x_curr_layer(k)); ineq_constraints{icount,2} = [j,k]; icount = icount + 1; 
 
@@ -254,15 +249,9 @@ for j = 1:length(dim_hidden)
             if Y_min_curr_layer(k) < -x_m
                 grad2a = (X_min_curr_layer(k) - tanh(-x_m))/(Y_min_curr_layer(k) - -x_m);
                 c2a = X_min_curr_layer(k) - grad2a*Y_min_curr_layer(k);
-                % Check for overlapping sectors
-                if X_max_curr_layer(k) <  Y_max_curr_layer(k)*grad2a + c2a
-                    grad2a = (X_max_curr_layer(k) - tanh(-x_m))/(Y_max_curr_layer(k) - -x_m);
-                    c2a = X_max_curr_layer(k) - grad2a*Y_max_curr_layer(k);  
-                end
             else
                 grad2a = 0; 
-                %c2a = X_min_curr_layer(k);
-                c2a = tanh(-x_m);
+                c2a = X_min_curr_layer(k);
             end
             ineq_constraints{icount,1} = (x_curr_layer(k) - (grad2a*v{j}(k) + c2a))*((grad_L_lb*v{j}(k) + c_L_lb) - x_curr_layer(k)); ineq_constraints{icount,2} = [j,k]; icount = icount + 1; 
         
@@ -293,13 +282,12 @@ for j = 1:length(dim_hidden)
         end
 
         % Plot sectors to test constraint
-%         %syms a
-%         fplot(tanh(d3))
-%         hold on
-%         fplot(grad1a*d3 + c1a)
-%         fplot(grad_L_ub*d3 + c_L_ub)
-%         fplot(grad2a*d3 + c2a)
-%         fplot(grad_L_lb*d3 + c_L_lb)
+        fplot(tanh(x(1)))
+        hold on
+        fplot(grad1a*x(1) + c1a)
+        fplot(grad_L_ub*x(1) + c_L_ub)
+        fplot(grad2a*x(1) + c2a)
+        fplot(grad_L_lb*x(1) + c_L_lb)
                
         % Pre-processing bounds
         ineq_constraints{icount,1} = (x_curr_layer(k) - X_min_curr_layer(k))*(-x_curr_layer(k) + X_max_curr_layer(k)); ineq_constraints{icount,2} = [j,k]; icount = icount + 1; 
@@ -317,63 +305,24 @@ if repeated == 1
         if j == 1
             x_prev_layer = u;
             x_curr_layer = x(1:dim_hidden(j));
-            x_temp{j} = x_curr_layer;
             v_temp{j} = W{j}*u + b{j};
         else
             x_prev_layer = x(sum(dim_hidden(1:j-2)) + 1 : sum(dim_hidden(1:j-1)));
             x_curr_layer = x(sum(dim_hidden(1:j-1)) + 1 : sum(dim_hidden(1:j)));
-            x_temp{j} = x_curr_layer;
             v_temp{j} = W{j}*x_prev_layer + b{j};
         end
     end
+    v_temp = cat(1,v_temp{:});
     
-    if strcmp(AF, 'relu')
-        alpha = 0; beta = 1;
-    elseif strcmp(AF, 'sigmoid')
-        alpha = 0; beta = 0.25;
-    elseif strcmp(AF, 'tanh')
-        alpha = 0; beta = 1;
-    end
-       
-    for j = 1:length(v_temp)
-        for jj = j:length(v_temp)
-            for k = 1:length(v_temp{j})    
-                if j == jj
-                   for kk = k:length(v_temp{jj})
-                       if j == jj && k == kk
-
-                       else
-                           x1 = x_temp{j}(k); v1 = v_temp{j}(k);
-                           x2 = x_temp{jj}(kk); v2 = v_temp{jj}(kk);
-                           ineq_rep_constraints{ircount} = ((x2 - x1) - alpha*(v2 - v1))*(beta*(v2 - v1) - (x2 - x1)); ircount = ircount + 1;
-                       end
-                   end                 
-                else
-                    for kk = 1:length(v_temp{jj})
-                       if j == jj && k == kk
-
-                       else
-                           x1 = x_temp{j}(k); v1 = v_temp{j}(k);
-                           x2 = x_temp{jj}(kk); v2 = v_temp{jj}(kk);
-                           ineq_rep_constraints{ircount} = ((x2 - x1) - alpha*(v2 - v1))*(beta*(v2 - v1) - (x2 - x1)); ircount = ircount + 1;
-                       end
-                   end   
-                end
-            end
+    for j = 1:sum(dim_hidden)
+        for k = j+1:sum(dim_hidden)
+            x1 = x(j); v1 = v_temp(j);
+            x2 = x(k); v2 = v_temp(k);
+            %ineq_constraints{icount} = (x2 - x1)*(v2 - v1) - 0*(v2 - v1)^2; icount = icount + 1;
+            %ineq_constraints{icount} = 1*(v2 - v1)^2 - (x2 - x1)*(v2 - v1); icount = icount + 1;
+            ineq_rep_constraints{ircount} = ((x2 - x1) - 0*(v2 - v1))*(1*(v2 - v1) - (x2 - x1)); ircount = ircount + 1;
         end
     end
-    
-%     v_temp = cat(1,v_temp{:});
-%     
-%     for j = 1:sum(dim_hidden)
-%         for k = j+1:sum(dim_hidden)
-%             x1 = x(j); v1 = v_temp(j);
-%             x2 = x(k); v2 = v_temp(k);
-%             %ineq_constraints{icount} = (x2 - x1)*(v2 - v1) - 0*(v2 - v1)^2; icount = icount + 1;
-%             %ineq_constraints{icount} = 1*(v2 - v1)^2 - (x2 - x1)*(v2 - v1); icount = icount + 1;
-%             ineq_rep_constraints{ircount} = ((x2 - x1) - 0*(v2 - v1))*(1*(v2 - v1) - (x2 - x1)); ircount = ircount + 1;
-%         end
-%     end
 end
 
 % Only nodes connected in same hidden layer
@@ -472,52 +421,22 @@ if repeated == 5 && strcmp(AF, 'relu')
             v_temp{j} = W{j}*x_prev_layer + b{j};
         end
     end
+    v_temp = cat(1,v_temp{:});
     
-    for j = 1:length(v_temp)
-        for jj = j:length(v_temp)
-            for k = 1:length(v_temp{j})    
-                if j == jj
-                   for kk = k:length(v_temp{jj})
-                       if j == jj && k == kk
+    for j = 1:sum(dim_hidden)
+        for k = j+1:sum(dim_hidden)
+            x1 = x(j); v1 = v_temp(j);
+            x2 = x(k); v2 = v_temp(k);
 
-                       else
-                           x1 = x_temp{j}(k); v1 = v_temp{j}(k);
-                           x2 = x_temp{jj}(kk); v2 = v_temp{jj}(kk);
-                           ineq_rep_constraints{ircount} = ((x2 - x1) - 0*(v2 - v1))*(1*(v2 - v1) - (x2 - x1)); ircount = ircount + 1;
-                       end
-                   end                 
-                else
-                    for kk = 1:length(v_temp{jj})
-                       if j == jj && k == kk
-
-                       else
-                           x1 = x_temp{j}(k); v1 = v_temp{j}(k);
-                           x2 = x_temp{jj}(kk); v2 = v_temp{jj}(kk);
-                           ineq_rep_constraints{ircount} = ((x2 - x1) - 0*(v2 - v1))*(1*(v2 - v1) - (x2 - x1)); ircount = ircount + 1;
-                       end
-                   end   
-                end
-            end
+            if any(j == Ip) && any(k == Ip)
+                eq_rep_constraints{ercount} = x1 - x2 - (v1 - v2); ercount = ercount + 1;                
+            elseif any(j == In) && any(k == In)
+                eq_rep_constraints{ercount} = x1 - x2; ercount = ercount + 1;
+            else
+                ineq_rep_constraints{ircount} = -(x1 - x2 - 0)*(x1 - x2 - 1*(v1 - v2)); ircount = ircount + 1;                
+            end     
         end
     end
-    
-    
-%     v_temp = cat(1,v_temp{:});
-%     
-%     for j = 1:sum(dim_hidden)
-%         for k = j+1:sum(dim_hidden)
-%             x1 = x(j); v1 = v_temp(j);
-%             x2 = x(k); v2 = v_temp(k);
-% 
-%             if any(j == Ip) && any(k == Ip)
-%                 eq_rep_constraints{ercount} = x1 - x2 - (v1 - v2); ercount = ercount + 1;                
-%             elseif any(j == In) && any(k == In)
-%                 eq_rep_constraints{ercount} = x1 - x2; ercount = ercount + 1;
-%             else
-%                 ineq_rep_constraints{ircount} = -(x1 - x2 - 0)*(x1 - x2 - 1*(v1 - v2)); ircount = ircount + 1;                
-%             end     
-%         end
-%     end
    
 end
 
